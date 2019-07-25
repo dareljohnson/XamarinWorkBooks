@@ -1,0 +1,195 @@
+---
+packages:
+- id: Microsoft.Office.Interop.Excel
+  version: 15.0.4795.1000
+- id: Newtonsoft.Json
+  version: 12.0.2
+- id: Stateless
+  version: 4.2.1
+uti: com.xamarin.workbook
+id: 59d9e4d1-7314-4cf5-9ac1-6124b39e0c56
+title: Test
+platforms:
+- DotNetCore
+---
+
+```csharp
+#r "Newtonsoft.Json"
+```
+
+```csharp
+#r "Stateless"
+```
+
+```csharp
+#r "Microsoft.Office.Interop.Excel"
+```
+
+```csharp
+using System;
+using Excel = Microsoft.Office.Interop.Excel;
+using System.Data;
+using System.Data.SqlTypes;
+```
+
+```csharp
+//Create COM Objects.
+Excel.Application xlsApp = new Excel.Application();
+xlsApp.Visible = false;
+DataRow myNewRow;
+DataRow transformedRow;
+DataTable myTable;
+DataTable transTable;
+ 
+```
+
+```csharp
+if (xlsApp == null)
+{
+   Console.WriteLine("Excel is not installed!!");
+   return;
+}
+```
+
+```csharp
+//Notice: Change this path to your real excel file path
+Excel.Workbook xlsBook = xlsApp.Workbooks.Open(@"C:\Users\Darel\Documents\Xamarin Projects\excelDatatable.xlsx");
+Excel.Worksheet xlsSheet = (Excel.Worksheet)xlsBook.ActiveSheet;
+Excel.Range xlsRangeFirstCell = xlsSheet.get_Range("A1");
+Excel.Range xlsRangeLastCell = xlsSheet.Cells.SpecialCells(Excel.XlCellType.xlCellTypeLastCell);
+Excel.Range xlsRange = xlsSheet.get_Range(xlsRangeFirstCell, xlsRangeLastCell);
+object[,] objValue = xlsRange.Value2 as object[,];
+```
+
+```csharp
+ //Array[][] to DataTable
+long rows = objValue.GetLongLength(0);
+long cols = objValue.GetLongLength(1);
+```
+
+```csharp
+//Set DataTable Name and Columns Name
+myTable = new DataTable("MyDataTable");
+myTable.Columns.Add("FirstName", typeof(string));
+myTable.Columns.Add("LastName", typeof(string));
+myTable.Columns.Add("Age", typeof(string));
+
+//Set DataTable Name and Columns Name
+transTable = new DataTable();
+transTable.Columns.Add("FirstName", typeof(string));
+transTable.Columns.Add("LastName", typeof(string));
+transTable.Columns.Add("Age", typeof(string));
+```
+
+```csharp
+myNewRow = myTable.NewRow();
+transformedRow = transTable.NewRow();
+```
+
+```csharp
+public class Person
+{
+    private string firstName;
+    public string FirstName
+    {
+      get { return firstName; }
+      set { firstName = value; }
+    }
+
+    private string lastName;
+    public string LastName
+    {
+      get { return lastName; }
+      set { lastName = value; }
+    }
+
+    private string age;
+    public string Age
+    {
+      get { return age; }
+      set { age = value; }
+    }
+}
+
+List<Person> people = new List<Person>();
+```
+
+```csharp
+public static string UppercaseWords(string value) {
+ char[] array = value.ToCharArray();
+ // Handle the first letter in the string.
+ if (array.Length >= 1) {
+  if (char.IsLower(array[0])) {
+   array[0] = char.ToUpper(array[0]);
+  }
+ }
+ // Scan through the letters, checking for spaces.
+ // ... Uppercase the lowercase letters following spaces.
+ for (int i = 1; i < array.Length; i++) {
+  if (array[i - 1] == ' ') {
+   if (char.IsLower(array[i])) {
+    array[i] = char.ToUpper(array[i]);
+   }
+  }
+ }
+ return new string(array);
+}
+```
+
+```csharp
+public static string UppercaseFirst(string s) {
+ if (string.IsNullOrEmpty(s)) {
+  return string.Empty;
+ }
+ char[] a = s.ToCharArray();
+ a[0] = char.ToUpper(a[0]);
+ return new string(a);
+}
+```
+
+Put data rows from Excel spreadsheet into Datatable
+
+```csharp
+//first row using for heading, start second row for data
+
+for (int i = 2; i <= rows; i++)
+{
+	myNewRow = myTable.NewRow();
+    for(int j =1; j <= cols; j++){ 
+        myNewRow[j-1] = objValue[i, j] ==null || string.IsNullOrEmpty(objValue[i, j].ToString()) ? string.Empty : UppercaseFirst(objValue[i, j].ToString().ToLower().Trim());
+    }
+	myTable.Rows.Add(myNewRow);
+}
+
+
+foreach (DataRow dr in myTable.Rows.Cast<DataRow>())
+{
+    if(dr.ItemArray.Count() == cols)
+    {
+        try{
+            //Console.WriteLine("First Name : {0}\t Last Name : {1} \t Age : {2} \t", dr[0], dr[1], dr[2]);
+            people.Add(new Person(){
+                FirstName = dr["FirstName"].ToString() !=""  ? dr["FirstName"].ToString() : string.Empty,
+                LastName = dr["LastName"].ToString() !="" ? dr["LastName"].ToString() : string.Empty,
+                Age = dr["Age"].ToString() !="" ? dr["Age"].ToString() : ""
+            });
+        }
+        catch(Exception e){
+            Console.WriteLine("The selected row is empty" + e);
+            Console.WriteLine(e.StackTrace);
+            continue;
+        }
+    } 
+} 
+
+foreach(var person in people)
+{
+    Console.WriteLine("First Name : {0}\t Last Name : {1} \t Age : {2} \t", person.FirstName, person.LastName, person.Age);
+} 
+```
+
+```csharp
+xlsBook.Close();
+xlsApp.Quit();
+System.Runtime.InteropServices.Marshal.ReleaseComObject(xlsApp);
+```
